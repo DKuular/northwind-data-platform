@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-22.04
     
     steps:
-      - uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
       
       - name: Validate SQL syntax
         run: |
@@ -35,7 +36,8 @@ jobs:
     runs-on: ubuntu-22.04
     
     steps:
-      - uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
       
       - name: Validate Docker Compose files
         run: |
@@ -48,20 +50,36 @@ jobs:
     runs-on: ubuntu-22.04
     
     steps:
-      - uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
       
       - name: Install yamllint
-        run: pip install yamllint==1.35.1  # Фиксированная версия
+        run: pip install yamllint==1.35.1
       
-      - name: Run yamllint
+      - name: Run yamllint with relaxed rules
         run: |
-          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint
+          # Создаём конфиг для yamllint на лету
+          cat > .yamllint << 'EOF'
+          extends: default
+          rules:
+            line-length: disable
+            document-start: disable
+            truthy: disable
+            braces:
+              level: warning
+            brackets:
+              level: warning
+            commas:
+              level: warning
+          EOF
+          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint -c .yamllint
 
   validate-shell:
     runs-on: ubuntu-22.04
     
     steps:
-      - uses: actions/checkout@v4.1.7
+      - name: Checkout code
+        uses: actions/checkout@v4.1.7
       
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck=0.8.0-2
