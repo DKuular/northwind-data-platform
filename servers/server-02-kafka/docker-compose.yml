@@ -12,8 +12,8 @@ services:
     ports:
       - "2181:2181"
     networks:
-      - kafka-net
-      - data-platform-net
+      - kafka-network
+      - data-platform-network
     restart: unless-stopped
 
   kafka:
@@ -22,16 +22,27 @@ services:
     depends_on:
       - zookeeper
     environment:
+      # Основные настройки
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      
+      # Настройка listeners - исправлено
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      
+      # Настройки для работы в Docker
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      
+      # Ограничение памяти
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"
     ports:
       - "9092:9092"
     networks:
-      - kafka-net
-      - data-platform-net
+      - kafka-network
+      - data-platform-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
@@ -40,7 +51,9 @@ services:
       retries: 5
 
 networks:
-  kafka-net:
+  kafka-network:
     external: true
-  data-platform-net:
+    name: kafka-network
+  data-platform-network:
     external: true
+    name: data-platform-network

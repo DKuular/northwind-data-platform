@@ -1,5 +1,3 @@
-version: '3.8'
-
 name: northwind-oltp
 
 services:
@@ -22,8 +20,8 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - oltp-net
-      - data-platform-net
+      - oltp-network
+      - data-platform-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
@@ -47,8 +45,8 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - oltp-net
-      - data-platform-net
+      - oltp-network
+      - data-platform-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +56,7 @@ volumes:
   postgres_data:
 
 networks:
-  oltp-net:
+  oltp-network:
     external: true
-  data-platform-net:
+  data-platform-network:
     external: true

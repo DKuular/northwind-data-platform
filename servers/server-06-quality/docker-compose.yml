@@ -12,12 +12,13 @@ services:
       - ./prometheus:/etc/prometheus
       - prometheus_data:/prometheus
     networks:
-      - quality-net
-      - data-platform-net
+      - quality-network
+      - data-platform-network
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
     restart: unless-stopped
+    user: root
 
   grafana:
     image: grafana/grafana:10.4.5
@@ -28,9 +29,11 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
     networks:
-      - quality-net
-      - data-platform-net
+      - quality-network
+      - data-platform-network
     restart: unless-stopped
 
 volumes:
@@ -38,7 +41,9 @@ volumes:
   grafana_data:
 
 networks:
-  quality-net:
+  quality-network:
     external: true
-  data-platform-net:
+    name: quality-network
+  data-platform-network:
     external: true
+    name: data-platform-network

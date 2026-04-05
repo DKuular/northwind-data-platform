@@ -4,13 +4,17 @@ name: northwind-ml
 
 services:
   mlflow:
-    image: mlflow:2.14.3
+    image: ghcr.io/mlflow/mlflow:v2.14.3
     container_name: northwind-mlflow
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /artifacts
     ports:
       - "5000:5000"
     networks:
-      - ml-net
-      - data-platform-net
+      - ml-network
+      - data-platform-network
+    volumes:
+      - mlflow_data:/mlflow
+      - mlflow_artifacts:/artifacts
     restart: unless-stopped
 
   redis:
@@ -19,12 +23,23 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - ml-net
-      - data-platform-net
+      - ml-network
+      - data-platform-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mlflow_data:
+  mlflow_artifacts:
 
 networks:
-  ml-net:
+  ml-network:
     external: true
-  data-platform-net:
+    name: ml-network
+  data-platform-network:
     external: true
+    name: data-platform-network

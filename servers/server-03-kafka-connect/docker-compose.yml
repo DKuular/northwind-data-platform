@@ -1,0 +1,31 @@
+version: '3.8'
+
+name: northwind-kafka-connect
+
+services:
+  kafka-connect:
+    image: debezium/connect:2.6.1.Final
+    container_name: northwind-connect
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      STATUS_STORAGE_TOPIC: connect_statuses
+    ports:
+      - "8083:8083"
+    networks:
+      - connect-network
+      - data-platform-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  connect-network:
+    external: true
+  data-platform-network:
+    external: true

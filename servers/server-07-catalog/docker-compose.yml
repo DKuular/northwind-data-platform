@@ -3,18 +3,74 @@ version: '3.8'
 name: northwind-catalog
 
 services:
+  postgres-catalog:
+    image: postgres:15.8-alpine3.20
+    container_name: northwind-catalog-postgres
+    environment:
+      POSTGRES_DB: openmetadata_db
+      POSTGRES_USER: openmetadata_user
+      POSTGRES_PASSWORD: openmetadata_password
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
+    networks:
+      - catalog-network
+      - data-platform-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openmetadata_user -d openmetadata_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.20
+    container_name: northwind-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - catalog-network
+      - data-platform-network
+    restart: unless-stopped
+
   openmetadata:
     image: openmetadata/server:1.5.5
     container_name: northwind-openmetadata
+    depends_on:
+      postgres-catalog:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+    environment:
+      # PostgreSQL конфигурация
+      DB_HOST: postgres-catalog
+      DB_PORT: 5432
+      DB_USER: openmetadata_user
+      DB_PASSWORD: openmetadata_password
+      DB_NAME: openmetadata_db
+      # Elasticsearch конфигурация
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
+      # Сервер конфигурация
+      SERVER_HOST_API: http://localhost:8585
+      AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.NoopAuthorizer
     ports:
       - "8585:8585"
     networks:
-      - catalog-net
-      - data-platform-net
+      - catalog-network
+      - data-platform-network
     restart: unless-stopped
 
+volumes:
+  catalog_postgres_data:
+  elasticsearch_data:
+
 networks:
-  catalog-net:
+  catalog-network:
     external: true
-  data-platform-net:
+    name: catalog-network
+  data-platform-network:
     external: true
+    name: data-platform-network
