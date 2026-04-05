@@ -1,0 +1,71 @@
+name: Validate Code & Configs
+
+on:
+  push:
+    branches: [develop, feature/*]
+    paths-ignore:
+      - 'docs/**'
+      - 'README.md'
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate-sql:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4.1.7
+      
+      - name: Validate SQL syntax
+        run: |
+          for sql in $(find . -name "*.sql" -not -path "./.git/*"); do
+            echo "Validating $sql"
+            if ! grep -q "CREATE\|INSERT\|SELECT\|UPDATE\|DELETE" "$sql"; then
+              echo "⚠️  $sql appears empty or invalid"
+            fi
+          done
+      
+      - name: Check for dangerous SQL
+        run: |
+          if grep -r "DROP.*DATABASE" --include="*.sql" .; then
+            echo "⚠️  Warning: Found DROP DATABASE in SQL files"
+          fi
+
+  validate-docker:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4.1.7
+      
+      - name: Validate Docker Compose files
+        run: |
+          for compose in $(find servers -name "docker-compose.yml" 2>/dev/null); do
+            echo "Validating $compose"
+            docker compose -f "$compose" config --quiet || exit 1
+          done
+
+  validate-yaml:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4.1.7
+      
+      - name: Install yamllint
+        run: pip install yamllint==1.35.1  # Фиксированная версия
+      
+      - name: Run yamllint
+        run: |
+          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint -c auto
+
+  validate-shell:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4.1.7
+      
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck=0.8.0-2
+      
+      - name: Run shellcheck
+        run: |
+          find . -name "*.sh" -not -path "./.git/*" -exec shellcheck {} \;

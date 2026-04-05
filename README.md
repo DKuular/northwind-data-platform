@@ -35,10 +35,10 @@ cp .env.example .env
 
 #Access URLs
 Service	URL
-Airflow	http://localhost:8080
+Airflow	    http://localhost:8080
 Superset	http://localhost:8088
-Grafana	http://localhost:3000
-MinIO	http://localhost:9000
+Grafana	    http://localhost:3000
+MinIO	    http://localhost:9000
 
 License
 MIT
