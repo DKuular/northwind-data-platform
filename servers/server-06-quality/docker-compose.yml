@@ -1,0 +1,44 @@
+version: '3.8'
+
+name: northwind-quality
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    container_name: northwind-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - quality-net
+      - data-platform-net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.5
+    container_name: northwind-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - quality-net
+      - data-platform-net
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  quality-net:
+    external: true
+  data-platform-net:
+    external: true

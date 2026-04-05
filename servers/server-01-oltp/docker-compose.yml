@@ -4,14 +4,14 @@ name: northwind-oltp
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:15.8-alpine3.20
     container_name: northwind-postgres
     environment:
       POSTGRES_DB: northwind
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
     command: |
-      postgres 
+      postgres
       -c wal_level=logical
       -c max_wal_senders=10
       -c max_replication_slots=10
@@ -22,10 +22,8 @@ services:
     ports:
       - "5432:5432"
     networks:
-      oltp-net:
-        ipv4_address: 172.20.0.10
-      data-platform-net:
-        ipv4_address: 172.25.0.10
+      - oltp-net
+      - data-platform-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
@@ -34,12 +32,12 @@ services:
       retries: 5
 
   airflow:
-    image: apache/airflow:2.8.1
+    image: apache/airflow:2.8.1-python3.11
     container_name: northwind-airflow
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/airflow
-      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/northwind
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/airflow
+      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/northwind
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_PASSWORD:-admin}
     volumes:
@@ -49,10 +47,8 @@ services:
     ports:
       - "8080:8080"
     networks:
-      oltp-net:
-        ipv4_address: 172.20.0.20
-      data-platform-net:
-        ipv4_address: 172.25.0.20
+      - oltp-net
+      - data-platform-net
     depends_on:
       postgres:
         condition: service_healthy

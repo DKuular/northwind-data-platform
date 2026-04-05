@@ -1,0 +1,30 @@
+version: '3.8'
+
+name: northwind-ml
+
+services:
+  mlflow:
+    image: mlflow:2.14.3
+    container_name: northwind-mlflow
+    ports:
+      - "5000:5000"
+    networks:
+      - ml-net
+      - data-platform-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.0-alpine
+    container_name: northwind-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ml-net
+      - data-platform-net
+    restart: unless-stopped
+
+networks:
+  ml-net:
+    external: true
+  data-platform-net:
+    external: true

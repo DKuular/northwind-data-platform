@@ -1,0 +1,20 @@
+version: '3.8'
+
+name: northwind-catalog
+
+services:
+  openmetadata:
+    image: openmetadata/server:1.5.5
+    container_name: northwind-openmetadata
+    ports:
+      - "8585:8585"
+    networks:
+      - catalog-net
+      - data-platform-net
+    restart: unless-stopped
+
+networks:
+  catalog-net:
+    external: true
+  data-platform-net:
+    external: true
