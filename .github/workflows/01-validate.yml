@@ -55,7 +55,7 @@ jobs:
       
       - name: Run yamllint
         run: |
-          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint -c auto
+          find . -name "*.yml" -o -name "*.yaml" | xargs yamllint
 
   validate-shell:
     runs-on: ubuntu-22.04
