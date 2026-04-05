@@ -1,5 +1,3 @@
-version: '3.8'
-
 name: northwind-kafka
 
 services:
@@ -8,12 +6,10 @@ services:
     container_name: northwind-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
     networks:
-      - kafka-network
-      - data-platform-network
+      - northwind-net
     restart: unless-stopped
 
   kafka:
@@ -22,38 +18,18 @@ services:
     depends_on:
       - zookeeper
     environment:
-      # Основные настройки
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      
-      # Настройка listeners - исправлено
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://northwind-kafka:9092
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      
-      # Настройки для работы в Docker
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
-      
-      # Ограничение памяти
-      KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"
     ports:
       - "9092:9092"
     networks:
-      - kafka-network
-      - data-platform-network
+      - northwind-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
 networks:
-  kafka-network:
+  northwind-net:
     external: true
-    name: kafka-network
-  data-platform-network:
-    external: true
-    name: data-platform-network
+    name: northwind-net
