@@ -1,0 +1,21 @@
+repos:
+  # - repo: https://github.com/Yelp/detect-secrets
+  #   rev: v1.4.0
+  #   hooks:
+  #     - id: detect-secrets
+  #       args: ['--baseline', '.secrets.baseline']
+  #       exclude: '\.lock$|\.min\.|\.example$'
+
+  - repo: local
+    hooks:
+      - id: check-env-file
+        name: Check .env not committed
+        entry: Do not commit .env file
+        language: fail
+        files: '\.env$'
+        exclude: '\.env\.example$'
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
