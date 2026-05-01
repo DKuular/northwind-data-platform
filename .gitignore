@@ -25,6 +25,8 @@ logs/
 *.log
 *.out
 *.err
+server-01-oltp/logs/*
+servers/server-01-oltp/dags/__pycache__/*
 
 # Spark artifacts
 spark-warehouse/

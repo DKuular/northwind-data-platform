@@ -10,14 +10,23 @@ services:
       CONFIG_STORAGE_TOPIC: connect_configs
       OFFSET_STORAGE_TOPIC: connect_offsets
       STATUS_STORAGE_TOPIC: connect_statuses
+      # Увеличиваем таймауты
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      # REST настройки
+      REST_ADVERTISED_HOST_NAME: localhost
+      REST_ADVERTISED_PORT: 8083
     ports:
       - "8083:8083"
     networks:
-      - northwind-net
+      - connect-network
+      - data-platform-network
     restart: unless-stopped
 
 networks:
-  northwind-net:
+  connect-network:
     external: true
-    name: northwind-net
+  data-platform-network:
+    external: true
     
