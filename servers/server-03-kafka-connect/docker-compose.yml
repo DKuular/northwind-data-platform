@@ -23,6 +23,20 @@ services:
       - connect-network
       - data-platform-network
     restart: unless-stopped
+  
+  debezium-ui:
+    image: quay.io/debezium/debezium-ui:latest
+    # image: quay.io/debezium/debezium-ui:2.6.1.Final
+    container_name: northwind-debezium-ui
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CONNECT_URIS: http://northwind-connect:8083
+    networks:
+      - data-platform-network
+    depends_on:
+      - kafka-connect
+    restart: unless-stopped
 
 networks:
   connect-network:
