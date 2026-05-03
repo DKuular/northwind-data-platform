@@ -40,31 +40,31 @@ services:
       - ivy-cache-jupyter:/home/jovyan/.ivy2
     restart: unless-stopped
 
-  spark-streaming-job:
-    image: apache/spark:3.5.3
-    container_name: northwind-spark-streaming
-    user: root
-    environment:
-      - HOME=/home/spark
-    command: >
-      bash -c "
-      mkdir -p /home/spark/.ivy2/cache /home/spark/.ivy2/jars &&
-      chown -R spark:spark /home/spark/.ivy2 &&
-      exec /opt/spark/bin/spark-submit
-        --master spark://spark-master:7077
-        --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
-        /opt/spark/apps/bronze_streaming_simple.py
-      "
-    volumes:
-      - ./apps:/opt/spark/apps
-      - ./checkpoints:/opt/spark/checkpoints
-      - ivy-cache-spark:/home/spark/.ivy2
-    networks:
-      - spark-network
-    restart: unless-stopped
-    depends_on:
-      - spark-master
-      - spark-worker
+  # spark-streaming-job:
+  #   image: apache/spark:3.5.3
+  #   container_name: northwind-spark-streaming
+  #   user: root
+  #   environment:
+  #     - HOME=/home/spark
+  #   command: >
+  #     bash -c "
+  #     mkdir -p /home/spark/.ivy2/cache /home/spark/.ivy2/jars &&
+  #     chown -R spark:spark /home/spark/.ivy2 &&
+  #     exec /opt/spark/bin/spark-submit
+  #       --master spark://spark-master:7077
+  #       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+  #       /opt/spark/apps/bronze_streaming_simple.py
+  #     "
+  #   volumes:
+  #     - ./apps:/opt/spark/apps
+  #     - ./checkpoints:/opt/spark/checkpoints
+  #     - ivy-cache-spark:/home/spark/.ivy2
+  #   networks:
+  #     - spark-network
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - spark-master
+  #     - spark-worker
 
 networks:
   spark-network:
