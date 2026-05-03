@@ -1,6 +1,3 @@
-# Обновляем docker-compose для server-04-spark
-version: '3.8'
-
 name: northwind-spark
 
 services:
@@ -9,7 +6,7 @@ services:
     container_name: northwind-spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     ports:
-      - "8081:8080"
+      - "8085:8080"
       - "7077:7077"
     networks:
       - spark-network
@@ -32,15 +29,50 @@ services:
     container_name: northwind-jupyter
     environment:
       JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: "spark_user"
     ports:
       - "8888:8888"
     networks:
       - spark-network
     volumes:
       - ./notebooks:/home/jovyan/work
+      - ./apps:/home/jovyan/work/apps
+      - ivy-cache-jupyter:/home/jovyan/.ivy2
     restart: unless-stopped
+
+  spark-streaming-job:
+    image: apache/spark:3.5.3
+    container_name: northwind-spark-streaming
+    user: root
+    environment:
+      - HOME=/home/spark
+    command: >
+      bash -c "
+      mkdir -p /home/spark/.ivy2/cache /home/spark/.ivy2/jars &&
+      chown -R spark:spark /home/spark/.ivy2 &&
+      exec /opt/spark/bin/spark-submit
+        --master spark://spark-master:7077
+        --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+        /opt/spark/apps/bronze_streaming_simple.py
+      "
+    volumes:
+      - ./apps:/opt/spark/apps
+      - ./checkpoints:/opt/spark/checkpoints
+      - ivy-cache-spark:/home/spark/.ivy2
+    networks:
+      - spark-network
+    restart: unless-stopped
+    depends_on:
+      - spark-master
+      - spark-worker
 
 networks:
   spark-network:
     external: true
     name: spark-network
+
+volumes:
+  ivy-cache-spark:
+    driver: local
+  ivy-cache-jupyter:
+    driver: local
