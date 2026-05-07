@@ -26,19 +26,65 @@ Production-like data platform for Northwind sales analytics.
 git clone https://github.com/YOUR_USERNAME/northwind-data-platform.git
 cd northwind-data-platform
 
-# Copy environment variables
+# Create env file
 cp .env.example .env
-# Edit .env with your passwords
+# Edit .env with your local credentials
 
-# Deploy all servers
-./scripts/deploy-all.sh
+# Start platform
+bash scripts/start-all.sh
 
-#Access URLs
-Service	URL
-Airflow	    http://localhost:8080
-Superset	http://localhost:8088
-Grafana	    http://localhost:3000
-MinIO	    http://localhost:9000
+```
 
-License
+## Service URLs
+
+- Airflow: http://localhost:8080
+- Superset: http://localhost:8088
+- Grafana: http://localhost:3000
+- MinIO: http://localhost:9000
+- Jupyter: http://localhost:8888
+- Prometheus: http://localhost:9090
+
+
+### Spark/Jupyter (Production-like setup)
+Jupyter uses a custom image from servers/server-04-spark/Dockerfile.jupyter.
+Spark/Kafka dependencies are pinned for reproducible local runs.
+Current validated Spark version: 3.5.0.
+
+### Smoke Check
+# In Jupyter run:
+
+```python 
+from pyspark.sql import SparkSession
+spark = SparkSession.builder.getOrCreate()
+print(spark.version)
+
+df = spark.readStream.format("kafka") \
+    .option("kafka.bootstrap.servers", "northwind-kafka:9092") \
+    .option("subscribe", "dbserver1.public.customers") \
+    .option("startingOffsets", "latest") \
+    .load()
+
+print("Kafka source initialized:", df.isStreaming)
+
+```
+
+Expected:
+- `spark.version == 3.5.0`
+- `Kafka source initialized: True`
+
+
+### Monitoring Smoke Check
+
+```bash
+curl -s http://localhost:9090/api/v1/targets
+```
+
+
+Expected targets with `health: "up"`:
+- `kafka-connect-jmx`
+- `postgres-exporter`
+- `node-exporter`
+- `prometheus`
+
+## License
 MIT

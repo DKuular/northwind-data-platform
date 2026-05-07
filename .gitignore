@@ -84,3 +84,5 @@ ENV/
 # Other
 docker_commands.txt
 docker_commands.md
+
+conversations/

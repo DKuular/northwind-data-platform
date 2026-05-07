@@ -2,7 +2,7 @@ name: northwind-spark
 
 services:
   spark-master:
-    image: apache/spark:3.5.3
+    image: apache/spark:3.5.0
     container_name: northwind-spark-master
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     ports:
@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   spark-worker:
-    image: apache/spark:3.5.3
+    image: apache/spark:3.5.0
     container_name: northwind-spark-worker
     command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     ports:
@@ -27,7 +27,10 @@ services:
     restart: unless-stopped
 
   jupyter:
-    image: jupyter/pyspark-notebook:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
+    image: northwind-jupyter:3.5.0
     container_name: northwind-jupyter
     environment:
       JUPYTER_ENABLE_LAB: "yes"
