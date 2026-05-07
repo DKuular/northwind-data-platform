@@ -5,11 +5,14 @@
 # Secrets and environment variables
 .env
 .env.local
+.env.example
 .env.*.local
 *.pem
 *.key
 *.crt
 
+# Binary artifacts
+*.jar
 
 # Data directories
 data/

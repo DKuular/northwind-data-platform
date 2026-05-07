@@ -10,6 +10,7 @@ services:
       - "7077:7077"
     networks:
       - spark-network
+      - data-platform-network
     restart: unless-stopped
 
   spark-worker:
@@ -20,6 +21,7 @@ services:
       - "8082:8081"
     networks:
       - spark-network
+      - data-platform-network
     depends_on:
       - spark-master
     restart: unless-stopped
@@ -34,6 +36,7 @@ services:
       - "8888:8888"
     networks:
       - spark-network
+      - data-platform-network
     volumes:
       - ./notebooks:/home/jovyan/work
       - ./apps:/home/jovyan/work/apps
@@ -70,6 +73,9 @@ networks:
   spark-network:
     external: true
     name: spark-network
+  data-platform-network:
+    external: true
+    name: data-platform-network
 
 volumes:
   ivy-cache-spark:

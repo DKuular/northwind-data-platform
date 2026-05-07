@@ -3,7 +3,7 @@ DAG для генерации продаж Northwind
 Генерация от последней даты в БД до сегодня
 Расписание: каждые 20 минут с 10:00 до 19:00
 
-Версия 1.0.8
+Версия 1.0.10
 """
 
 import sys
@@ -91,7 +91,6 @@ def show_stats(**context):
     logger.info("=" * 60)
     logger.info("📊 СТАТИСТИКА БАЗЫ ДАННЫХ NORTHWIND")
     logger.info(f"   Всего заказов: {stats['total_orders']:,}")
-    logger.info(f"   Общая сумма: ${stats['total_amount']:,.2f}")
     logger.info(f"   Первый заказ: {stats['first_order']}")
     logger.info(f"   Последний заказ: {stats['last_order']}")
     logger.info("=" * 60)
@@ -101,7 +100,7 @@ with DAG(
     'generate_northwind_sales',
     default_args=default_args,
     description='Генерация продаж Northwind от последней даты до сегодня',
-    schedule_interval='*/20 10-19 * * *',  # Каждые 20 минут с 10:00 до 19:00
+    schedule_interval='*/20 7-16 * * *',  # Каждые 20 минут с 10:00 до 19:00
     catchup=False,
     tags=['sales', 'generation', 'northwind'],
     max_active_runs=1,

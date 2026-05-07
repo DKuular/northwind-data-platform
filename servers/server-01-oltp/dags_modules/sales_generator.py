@@ -255,7 +255,6 @@ def get_generation_stats(hook):
     stats = execute_query("""
         SELECT 
             COUNT(*) as total_orders,
-            COALESCE(SUM(total_amount), 0) as total_amount,
             MIN(order_date) as first_order,
             MAX(order_date) as last_order
         FROM orders
@@ -263,7 +262,6 @@ def get_generation_stats(hook):
     
     return {
         'total_orders': stats[0] if stats and len(stats) > 0 else 0,
-        'total_amount': round(stats[1], 2) if stats and len(stats) > 1 and stats[1] else 0,
         'first_order': stats[2] if stats and len(stats) > 2 else None,
         'last_order': stats[3] if stats and len(stats) > 3 else None
     }

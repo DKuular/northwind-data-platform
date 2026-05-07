@@ -10,23 +10,26 @@ services:
       CONFIG_STORAGE_TOPIC: connect_configs
       OFFSET_STORAGE_TOPIC: connect_offsets
       STATUS_STORAGE_TOPIC: connect_statuses
-      # Увеличиваем таймауты
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      # REST настройки
       REST_ADVERTISED_HOST_NAME: localhost
       REST_ADVERTISED_PORT: 8083
+      # Java agent для JMX экспортера
+      KAFKA_OPTS: "-javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=12345:/opt/jmx/jmx-exporter-config.yaml"
     ports:
       - "8083:8083"
+      - "12345:12345"
+    volumes:
+      - ./jmx/jmx_prometheus_javaagent.jar:/opt/jmx/jmx_prometheus_javaagent.jar
+      - ./jmx/jmx-exporter-config.yaml:/opt/jmx/jmx-exporter-config.yaml
     networks:
       - connect-network
       - data-platform-network
     restart: unless-stopped
-  
+
   debezium-ui:
     image: quay.io/debezium/debezium-ui:latest
-    # image: quay.io/debezium/debezium-ui:2.6.1.Final
     container_name: northwind-debezium-ui
     ports:
       - "8081:8080"
@@ -43,4 +46,3 @@ networks:
     external: true
   data-platform-network:
     external: true
-    

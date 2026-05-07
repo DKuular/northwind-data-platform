@@ -1,0 +1,40 @@
+---
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: false
+lowercaseOutputLabelNames: false
+rules:
+  # Debezium metrics
+  - pattern: "debezium<connector=([^,]+),context=([^,]+),type=connector-metrics,server=([^,]+)><>MilliSecondsBehindSource"
+    name: "debezium_connector_lag_ms"
+    labels:
+      connector: "$1"
+      context: "$2"
+      server: "$3"
+    help: "Отставание Debezium от источника в миллисекундах"
+
+  - pattern: "debezium<connector=([^,]+),context=([^,]+),type=connector-metrics,server=([^,]+)><>TotalNumberOfEventsSeen"
+    name: "debezium_connector_events_total"
+    labels:
+      connector: "$1"
+      context: "$2"
+      server: "$3"
+    help: "Общее количество обработанных событий"
+
+  - pattern: "debezium<connector=([^,]+),type=connector-task-metrics,server=([^,]+),task=([^,]+)><>Running"
+    name: "debezium_connector_task_running"
+    labels:
+      connector: "$1"
+      server: "$2"
+      task: "$3"
+    help: "Статус задачи коннектора"
+
+  # JVM metrics
+  - pattern: "java.lang<type=Memory><>HeapMemoryUsage"
+    name: "jvm_memory_heap_usage_bytes"
+    type: GAUGE
+
+  - pattern: "java.lang<type=GarbageCollector,name=([^,]+)><>CollectionCount"
+    name: "jvm_gc_collection_count"
+    labels:
+      gc_name: "$1"
