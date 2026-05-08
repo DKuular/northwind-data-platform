@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          if ls scripts/*.sh >/dev/null 2>&1; then
+            shellcheck scripts/*.sh
+          else
+            echo "No shell scripts found in scripts/"
+          fi
+
+  compose-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker compose files
+        run: |
+          docker compose -f servers/server-01-oltp/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-02-kafka/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-03-kafka-connect/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-04-spark/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-05-storage/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-06-quality/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-07-catalog/docker-compose.yml config >/dev/null
+          docker compose -f servers/server-08-ml/docker-compose.yml config >/dev/null
+
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Markdown
+        uses: avto-dev/markdown-lint@v1
+        with:
+          args: "**/*.md"
