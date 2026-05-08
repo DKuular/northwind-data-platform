@@ -37,23 +37,24 @@ bash scripts/start-all.sh
 
 ## Service URLs
 
-- Airflow: http://localhost:8080
-- Superset: http://localhost:8088
-- Grafana: http://localhost:3000
-- MinIO: http://localhost:9000
-- Jupyter: http://localhost:8888
-- Prometheus: http://localhost:9090
+- Airflow: <http://localhost:8080>
+- Superset: <http://localhost:8088>
+- Grafana: <http://localhost:3000>
+- MinIO: <http://localhost:9000>
+- Jupyter: <http://localhost:8888>
+- Prometheus: <http://localhost:9090>
 
+## Spark/Jupyter (Production-like setup)
 
-### Spark/Jupyter (Production-like setup)
 Jupyter uses a custom image from servers/server-04-spark/Dockerfile.jupyter.
 Spark/Kafka dependencies are pinned for reproducible local runs.
 Current validated Spark version: 3.5.0.
 
-### Smoke Check
-# In Jupyter run:
+## Smoke Check
 
-```python 
+In Jupyter run:
+
+```python
 from pyspark.sql import SparkSession
 spark = SparkSession.builder.getOrCreate()
 print(spark.version)
@@ -69,18 +70,18 @@ print("Kafka source initialized:", df.isStreaming)
 ```
 
 Expected:
+
 - `spark.version == 3.5.0`
 - `Kafka source initialized: True`
 
-
-### Monitoring Smoke Check
+## Monitoring Smoke Check
 
 ```bash
 curl -s http://localhost:9090/api/v1/targets
 ```
 
-
 Expected targets with `health: "up"`:
+
 - `kafka-connect-jmx`
 - `postgres-exporter`
 - `node-exporter`

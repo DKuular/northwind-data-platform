@@ -1,25 +1,30 @@
-## 🚀 Быстрый старт
+# Быстрый старт
 
 ```bash
-# 1. Клонировать репозиторий
-git clone https://github.com/DKuular/northwind_modern.git
-cd northwind_modern
+# 1) Клонировать репозиторий
+git clone https://github.com/DKuular/northwind-data-platform.git
+cd northwind-data-platform
 
-# 2. Настроить окружение
+# 2) Подготовить переменные окружения
 cp .env.example .env
-# Отредактируйте .env (пароли)
+# Заполните .env реальными значениями
+# Если у вас уже есть существующий volume Postgres, не меняйте POSTGRES_PASSWORD
+# без явной смены пароля в БД (ALTER USER) или reset volume.
 
-# 3. Запустить все сервисы
-./scripts/start-all.sh
+# 3) Запустить платформу
+bash scripts/start-all.sh
 
-# 4. Импортировать данные
-./scripts/import-northwind.sh
+# 4) Проверить, что контейнеры живы
+docker ps --format "table {{.Names}}\t{{.Status}}"
+```
 
-# 5. Проверить здоровье
-./scripts/health-check.sh
+## Следующий шаг после запуска
 
-# копирование файла с в докер
-docker cp /c/pojects/northwind-data-platform/northwind.sql northwind-postgres:/northwind.sql
+- Импортируйте демо-данные и настройте CDC по инструкции: `docs/setup/import_northwind.md`.
+- Проверьте мониторинг:
 
+```bash
+curl -s http://localhost:9090/api/v1/targets
+```
 
-
+Ожидается, что основные таргеты (`prometheus`, `node-exporter`, `kafka-connect-jmx`, `postgres-exporter`) будут в статусе `up`.

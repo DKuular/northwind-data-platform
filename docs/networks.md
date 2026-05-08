@@ -19,3 +19,14 @@
 ```bash
 # Пинг между контейнерами (нужен контейнер с ping)
 docker run --rm --network data-platform-network alpine ping -c 2 northwind-postgres
+```
+
+## Диагностика
+
+```bash
+# Какие контейнеры подключены к общей сети
+docker network inspect data-platform-network
+
+# Проверка DNS внутри сети
+docker run --rm --network data-platform-network busybox nslookup northwind-kafka
+```
