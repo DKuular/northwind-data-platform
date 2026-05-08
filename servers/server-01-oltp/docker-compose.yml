@@ -6,8 +6,8 @@ services:
     container_name: northwind-postgres
     environment:
       POSTGRES_DB: northwind
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     command: |
       postgres
       -c wal_level=logical
@@ -24,7 +24,7 @@ services:
       - data-platform-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,8 +35,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: 'false'
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/airflow
-      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/northwind
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/airflow
+      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/northwind
       PYTHONPATH: /opt/airflow/dags_modules
       AIRFLOW__WEBSERVER__WORKERS: 2
       AIRFLOW__WEBSERVER__WORKER_REFRESH_INTERVAL: 1800
@@ -69,7 +69,7 @@ services:
     command: |
       "
       # Ждём PostgreSQL
-      until pg_isready -h postgres -U ${POSTGRES_USER:-postgres}; do
+      until pg_isready -h postgres -U ${POSTGRES_USER}; do
         echo 'Waiting for PostgreSQL...'
         sleep 2
       done
@@ -80,7 +80,7 @@ services:
       # Создаём пользователя (если не существует)
       airflow users list | grep -q admin || airflow users create \
         --username admin \
-        --password ${AIRFLOW_PASSWORD:-admin} \
+        --password ${AIRFLOW_PASSWORD} \
         --firstname Admin \
         --lastname User \
         --role Admin \
@@ -96,8 +96,8 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS: 'false'
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/airflow
-      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres/northwind
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/airflow
+      AIRFLOW_CONN_POSTGRES_DEFAULT: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/northwind
       PYTHONPATH: /opt/airflow/dags_modules
     deploy:
       resources:
