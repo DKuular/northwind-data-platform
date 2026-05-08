@@ -1,6 +1,7 @@
 # Сети проекта Northwind Data Platform
 
 ## Основная сеть
+
 - **Имя**: `data-platform-network`
 - **Подсеть**: 172.25.0.0/24
 - **Назначение**: связь между всеми сервисами
@@ -16,6 +17,7 @@
 | northwind-minio | 172.25.0.X | storage-network, data-platform-network |
 
 ## Проверка соединений
+
 ```bash
 # Пинг между контейнерами (нужен контейнер с ping)
 docker run --rm --network data-platform-network alpine ping -c 2 northwind-postgres

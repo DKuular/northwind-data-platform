@@ -27,4 +27,5 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 curl -s http://localhost:9090/api/v1/targets
 ```
 
-Ожидается, что основные таргеты (`prometheus`, `node-exporter`, `kafka-connect-jmx`, `postgres-exporter`) будут в статусе `up`.
+Ожидается, что основные таргеты (`prometheus`, `node-exporter`,
+`kafka-connect-jmx`, `postgres-exporter`) будут в статусе `up`.

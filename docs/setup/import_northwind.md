@@ -14,23 +14,36 @@ curl -L -o northwind.sql https://raw.githubusercontent.com/pthom/northwind_psql/
 
 ```bash
 docker cp northwind.sql northwind-postgres:/northwind.sql
-docker exec -i northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} < northwind.sql
+docker exec -i northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} \
+  -d ${POSTGRES_DB:-northwind} < northwind.sql
 ```
 
 ## 3. Проверка импорта
 
 ```bash
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "\dt"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM customers;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM products;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM orders;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM order_details;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "\dt"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM customers;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM products;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM orders;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM order_details;"
 ```
 
 ## 4. Обновление дат (сдвиг на 9 лет)
 
 ```bash
-docker exec -i northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} << 'EOF'
+docker exec -i northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} \
+  -d ${POSTGRES_DB:-northwind} << 'EOF'
 UPDATE orders SET 
     order_date = order_date + INTERVAL '9 years',
     required_date = required_date + INTERVAL '9 years',
@@ -45,16 +58,26 @@ EOF
 ## 5. Количество записей в основных таблицах
 
 ```bash
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM customers;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM products;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM orders;"
-docker exec northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} -c "SELECT COUNT(*) FROM order_details;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM customers;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM products;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM orders;"
+docker exec northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} \
+  -c "SELECT COUNT(*) FROM order_details;"
 ```
 
 ## 6. Создание пользователей и прав
 
 ```bash
-docker exec -i northwind-postgres psql -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-northwind} << 'EOF'
+docker exec -i northwind-postgres psql \
+  -U ${POSTGRES_USER:-postgres} \
+  -d ${POSTGRES_DB:-northwind} << 'EOF'
 -- Debezium (CDC)
 CREATE USER debezium WITH PASSWORD 'change_me' REPLICATION;
 GRANT CONNECT ON DATABASE northwind TO debezium;
@@ -124,7 +147,8 @@ curl -X POST http://localhost:8083/connectors \
       "database.dbname": "northwind",
       "topic.prefix": "dbserver1",
       "plugin.name": "pgoutput",
-      "table.include.list": "public.customers,public.products,public.orders,public.order_details",
+      "table.include.list":
+        "public.customers,public.products,public.orders,public.order_details",
       "snapshot.mode": "initial"
     }
   }'
@@ -133,7 +157,8 @@ curl -X POST http://localhost:8083/connectors \
 ## 9. Проверка CDC
 
 ```bash
-docker exec northwind-kafka kafka-topics --bootstrap-server localhost:9092 --list | grep dbserver1
+docker exec northwind-kafka kafka-topics \
+  --bootstrap-server localhost:9092 --list | grep dbserver1
 
 docker exec northwind-kafka kafka-console-consumer \
   --bootstrap-server localhost:9092 \

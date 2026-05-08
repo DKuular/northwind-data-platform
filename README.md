@@ -88,4 +88,5 @@ Expected targets with `health: "up"`:
 - `prometheus`
 
 ## License
+
 MIT
