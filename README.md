@@ -50,6 +50,34 @@ Jupyter uses a custom image from servers/server-04-spark/Dockerfile.jupyter.
 Spark/Kafka dependencies are pinned for reproducible local runs.
 Current validated Spark version: 3.5.0.
 
+## Bronze Multi-Topic Streaming
+
+Bronze ingestion runs as 4 independent services using one shared image
+(`northwind-jupyter:3.5.0`) and one universal app
+(`servers/server-04-spark/apps/bronze_cdc_table.py`).
+Each service sets `BRONZE_TABLE` and writes to canonical MinIO paths in
+`s3a://iceberg-warehouse`.
+
+| Topic | Data path | Checkpoint path |
+| --- | --- | --- |
+| `dbserver1.public.customers` | `s3a://iceberg-warehouse/bronze/customers_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/customers_cdc` |
+| `dbserver1.public.products` | `s3a://iceberg-warehouse/bronze/products_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/products_cdc` |
+| `dbserver1.public.orders` | `s3a://iceberg-warehouse/bronze/orders_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/orders_cdc` |
+| `dbserver1.public.order_details` | `s3a://iceberg-warehouse/bronze/order_details_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/order_details_cdc` |
+
+Basic operations:
+
+```bash
+# View Bronze service containers
+docker ps --filter "name=northwind-bronze"
+
+# Tail logs per table
+docker logs -f northwind-bronze-customers
+docker logs -f northwind-bronze-products
+docker logs -f northwind-bronze-orders
+docker logs -f northwind-bronze-order-details
+```
+
 ## Smoke Check
 
 In Jupyter run:

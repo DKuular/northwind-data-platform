@@ -11,9 +11,11 @@ COPY jars/aws-java-sdk-bundle-1.12.262.jar /opt/spark-extra-jars/
 COPY jars/hadoop-aws-3.3.4.jar /opt/spark-extra-jars/
 COPY jars/kafka-clients-3.5.0.jar /opt/spark-extra-jars/
 COPY jars/spark-sql-kafka-0-10_2.12-3.5.0.jar /opt/spark-extra-jars/
+COPY jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar /opt/spark-extra-jars/
+COPY jars/commons-pool2-2.12.0.jar /opt/spark-extra-jars/
 
 USER jovyan
 
 # Чтобы Spark видел эти JAR по умолчанию
 ENV SPARK_EXTRA_CLASSPATH=/opt/spark-extra-jars/*
-ENV PYSPARK_SUBMIT_ARGS="--jars /opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar pyspark-shell"
+ENV PYSPARK_SUBMIT_ARGS="--jars /opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar pyspark-shell"

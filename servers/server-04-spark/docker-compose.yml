@@ -46,31 +46,113 @@ services:
       - ivy-cache-jupyter:/home/jovyan/.ivy2
     restart: unless-stopped
 
-  # spark-streaming-job:
-  #   image: apache/spark:3.5.3
-  #   container_name: northwind-spark-streaming
-  #   user: root
-  #   environment:
-  #     - HOME=/home/spark
-  #   command: >
-  #     bash -c "
-  #     mkdir -p /home/spark/.ivy2/cache /home/spark/.ivy2/jars &&
-  #     chown -R spark:spark /home/spark/.ivy2 &&
-  #     exec /opt/spark/bin/spark-submit
-  #       --master spark://spark-master:7077
-  #       --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
-  #       /opt/spark/apps/bronze_streaming_simple.py
-  #     "
-  #   volumes:
-  #     - ./apps:/opt/spark/apps
-  #     - ./checkpoints:/opt/spark/checkpoints
-  #     - ivy-cache-spark:/home/spark/.ivy2
-  #   networks:
-  #     - spark-network
-  #   restart: unless-stopped
-  #   depends_on:
-  #     - spark-master
-  #     - spark-worker
+  bronze-customers:
+    image: northwind-jupyter:3.5.0
+    container_name: northwind-bronze-customers
+    command: >
+      /usr/local/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --jars
+      /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
+      /home/jovyan/work/apps/bronze_cdc_table.py
+    environment:
+      BRONZE_TABLE: customers
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
+    volumes:
+      - ./apps:/home/jovyan/work/apps
+    networks:
+      - spark-network
+      - data-platform-network
+    depends_on:
+      - spark-master
+      - spark-worker
+    mem_limit: 1g
+    restart: unless-stopped
+
+  bronze-products:
+    image: northwind-jupyter:3.5.0
+    container_name: northwind-bronze-products
+    command: >
+      /usr/local/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --jars
+      /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
+      /home/jovyan/work/apps/bronze_cdc_table.py
+    environment:
+      BRONZE_TABLE: products
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
+    volumes:
+      - ./apps:/home/jovyan/work/apps
+    networks:
+      - spark-network
+      - data-platform-network
+    depends_on:
+      - spark-master
+      - spark-worker
+    mem_limit: 1g
+    restart: unless-stopped
+
+  bronze-orders:
+    image: northwind-jupyter:3.5.0
+    container_name: northwind-bronze-orders
+    command: >
+      /usr/local/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --jars
+      /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
+      /home/jovyan/work/apps/bronze_cdc_table.py
+    environment:
+      BRONZE_TABLE: orders
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
+    volumes:
+      - ./apps:/home/jovyan/work/apps
+    networks:
+      - spark-network
+      - data-platform-network
+    depends_on:
+      - spark-master
+      - spark-worker
+    mem_limit: 1g
+    restart: unless-stopped
+
+  bronze-order-details:
+    image: northwind-jupyter:3.5.0
+    container_name: northwind-bronze-order-details
+    command: >
+      /usr/local/spark/bin/spark-submit
+      --master spark://spark-master:7077
+      --jars
+      /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
+      /home/jovyan/work/apps/bronze_cdc_table.py
+    environment:
+      BRONZE_TABLE: order_details
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
+    volumes:
+      - ./apps:/home/jovyan/work/apps
+    networks:
+      - spark-network
+      - data-platform-network
+    depends_on:
+      - spark-master
+      - spark-worker
+    mem_limit: 1g
+    restart: unless-stopped
 
 networks:
   spark-network:

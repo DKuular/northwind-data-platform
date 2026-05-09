@@ -16,3 +16,10 @@
 - **Разработчик:** `setup/quick-start.md` -> `setup/import_northwind.md`
 - **Data инженер:** `setup/import_northwind.md` -> `architecture.md`
 - **DevOps:** `networks.md` -> `setup/quick-start.md`
+
+## Lakehouse Paths (canonical)
+
+- Bronze: `s3a://iceberg-warehouse/bronze/`
+- Silver: `s3a://iceberg-warehouse/silver/`
+- Gold: `s3a://iceberg-warehouse/gold/`
+- Checkpoints: `s3a://iceberg-warehouse/checkpoints/`
