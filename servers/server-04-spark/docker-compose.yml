@@ -64,6 +64,8 @@ services:
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+    healthcheck:
+      disable: true
     networks:
       - spark-network
       - data-platform-network
@@ -91,6 +93,8 @@ services:
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+    healthcheck:
+      disable: true
     networks:
       - spark-network
       - data-platform-network
@@ -118,6 +122,8 @@ services:
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+    healthcheck:
+      disable: true
     networks:
       - spark-network
       - data-platform-network
@@ -145,6 +151,8 @@ services:
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+    healthcheck:
+      disable: true
     networks:
       - spark-network
       - data-platform-network
