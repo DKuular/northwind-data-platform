@@ -58,12 +58,15 @@ Bronze ingestion runs as 4 independent services using one shared image
 Each service sets `BRONZE_TABLE` and writes to canonical MinIO paths in
 `s3a://iceberg-warehouse`.
 
-| Topic | Data path | Checkpoint path |
+Paths use prefix `s3a://iceberg-warehouse/`. Kafka topics:
+`dbserver1.public.<table>`.
+
+| Table | Bronze data | Checkpoint |
 | --- | --- | --- |
-| `dbserver1.public.customers` | `s3a://iceberg-warehouse/bronze/customers_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/customers_cdc` |
-| `dbserver1.public.products` | `s3a://iceberg-warehouse/bronze/products_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/products_cdc` |
-| `dbserver1.public.orders` | `s3a://iceberg-warehouse/bronze/orders_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/orders_cdc` |
-| `dbserver1.public.order_details` | `s3a://iceberg-warehouse/bronze/order_details_cdc` | `s3a://iceberg-warehouse/checkpoints/bronze/order_details_cdc` |
+| customers | `bronze/customers_cdc` | `chk/bronze/customers_cdc` |
+| products | `bronze/products_cdc` | `chk/bronze/products_cdc` |
+| orders | `bronze/orders_cdc` | `chk/bronze/orders_cdc` |
+| order_details | `bronze/order_details_cdc` | `chk/bronze/ord_details_cdc` |
 
 Basic operations:
 
