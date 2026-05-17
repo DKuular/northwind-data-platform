@@ -63,10 +63,10 @@ Paths use prefix `s3a://iceberg-warehouse/`. Kafka topics:
 
 | Table | Bronze data | Checkpoint |
 | --- | --- | --- |
-| customers | `bronze/customers_cdc` | `chk/bronze/customers_cdc` |
-| products | `bronze/products_cdc` | `chk/bronze/products_cdc` |
-| orders | `bronze/orders_cdc` | `chk/bronze/orders_cdc` |
-| order_details | `bronze/order_details_cdc` | `chk/bronze/ord_details_cdc` |
+| customers | `bronze/customers_cdc` | `checkpoints/bronze/customers_cdc` |
+| products | `bronze/products_cdc` | `checkpoints/bronze/products_cdc` |
+| orders | `bronze/orders_cdc` | `checkpoints/bronze/orders_cdc` |
+| order_details | `bronze/order_details_cdc` | `checkpoints/bronze/order_details_cdc` |
 
 Basic operations:
 

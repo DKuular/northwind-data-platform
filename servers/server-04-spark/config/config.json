@@ -34,8 +34,8 @@
       "apps_dir_container": "/home/jovyan/work/apps"
     },
     "bronze_streaming": {
-      "cores_max": "2",
-      "executor_cores": "2",
+      "cores_max": "1",
+      "executor_cores": "1",
       "executor_instances": "1",
       "executor_memory": "768m"
     },
