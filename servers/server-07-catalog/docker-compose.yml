@@ -1,13 +1,34 @@
 name: northwind-catalog
 
+# Credential values required in root .env; start-all.sh passes --env-file .env to compose.
+
+# Shared DB/ES settings for migrate + server (PostgreSQL, not MySQL defaults).
+x-openmetadata-env: &openmetadata-env
+  DB_DRIVER_CLASS: org.postgresql.Driver
+  DB_SCHEME: postgresql
+  DB_PARAMS: ""
+  DB_HOST: postgres-catalog
+  DB_PORT: 5432
+  DB_USER: ${OPENMETADATA_DB_USER}
+  DB_USER_PASSWORD: ${OPENMETADATA_DB_PASSWORD}
+  OM_DATABASE: openmetadata_db
+  ELASTICSEARCH_HOST: elasticsearch
+  ELASTICSEARCH_PORT: 9200
+  ELASTICSEARCH_SCHEME: http
+  SEARCH_TYPE: elasticsearch
+  MIGRATION_LIMIT_PARAM: 1200
+
 services:
   postgres-catalog:
     image: postgres:15.8-alpine3.20
     container_name: northwind-catalog-postgres
     environment:
       POSTGRES_DB: openmetadata_db
-      POSTGRES_USER: openmetadata_user
-      POSTGRES_PASSWORD: openmetadata_password
+      POSTGRES_USER: ${OPENMETADATA_DB_USER}
+      # Must match openmetadata DB_USER_PASSWORD (OPENMETADATA_DB_PASSWORD in .env).
+      # POSTGRES_PASSWORD is only applied on first volume init; changing .env later
+      # does not rotate an existing catalog_postgres_data volume.
+      POSTGRES_PASSWORD: ${OPENMETADATA_DB_PASSWORD}
     volumes:
       - catalog_postgres_data:/var/lib/postgresql/data
     networks:
@@ -15,7 +36,7 @@ services:
       - data-platform-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U openmetadata_user -d openmetadata_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${OPENMETADATA_DB_USER} -d openmetadata_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,6 +53,32 @@ services:
       - catalog-network
       - data-platform-network
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"' || exit 1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # Runs Flyway/native migrations once before the API server starts (official OM pattern).
+  execute-migrate-all:
+    image: openmetadata/server:1.5.5
+    container_name: northwind-openmetadata-migrate
+    command: "./bootstrap/openmetadata-ops.sh migrate"
+    environment:
+      <<: *openmetadata-env
+    depends_on:
+      postgres-catalog:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - catalog-network
+    restart: "no"
 
   openmetadata:
     image: openmetadata/server:1.5.5
@@ -40,18 +87,11 @@ services:
       postgres-catalog:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
+      execute-migrate-all:
+        condition: service_completed_successfully
     environment:
-      # PostgreSQL конфигурация
-      DB_HOST: postgres-catalog
-      DB_PORT: 5432
-      DB_USER: openmetadata_user
-      DB_PASSWORD: openmetadata_password
-      DB_NAME: openmetadata_db
-      # Elasticsearch конфигурация
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
-      # Сервер конфигурация
+      <<: *openmetadata-env
       SERVER_HOST_API: http://localhost:8585
       AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.NoopAuthorizer
     ports:

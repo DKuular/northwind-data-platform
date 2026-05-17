@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 ORDERS_PER_DAY_RANGE = (15, 45)
 ITEMS_PER_ORDER_RANGE = (2, 8)
 PRODUCTS_LIMIT = 50
+# Заказов за один запуск DAG, когда календарь уже «догнан» до сегодня (имитация потока продаж)
+INTRADAY_BATCH_RANGE = (3, 12)
 
 
 def get_last_order_date(hook):
@@ -164,8 +166,8 @@ def generate_order(refs, order_date, order_id):
     }
 
 
-def generate_orders_for_date_range(hook, refs, start_date, end_date):
-    """Генерация заказов за период"""
+def generate_orders_for_date_range(hook, refs, start_date, end_date, ignore_working_days=False):
+    """Генерация заказов за период. Если ignore_working_days=True — считать каждый день «рабочим»."""
     all_orders = []
     current_date = start_date
     total_orders = 0
@@ -173,13 +175,14 @@ def generate_orders_for_date_range(hook, refs, start_date, end_date):
     max_id_result = execute_query("SELECT COALESCE(MAX(order_id), 0) FROM orders", hook=hook)
     max_order_id = max_id_result[0] if max_id_result and len(max_id_result) > 0 else 0
     
-    logger.info(f"📅 Генерация заказов с {start_date} по {end_date}")
+    logger.info(f"📅 Генерация заказов с {start_date} по {end_date} (ignore_working_days={ignore_working_days})")
     logger.info(f"   Последний order_id: {max_order_id}")
     
     while current_date <= end_date:
-        if is_working_day(current_date):
+        if ignore_working_days or is_working_day(current_date):
             daily_orders = get_daily_orders_count()
-            logger.info(f"   {current_date} (рабочий): +{daily_orders} заказов")
+            day_kind = "рабочий" if is_working_day(current_date) else "выходной (принудительно)"
+            logger.info(f"   {current_date} ({day_kind}): +{daily_orders} заказов")
             
             for i in range(daily_orders):
                 order_id = max_order_id + total_orders + i + 1
@@ -194,6 +197,22 @@ def generate_orders_for_date_range(hook, refs, start_date, end_date):
     
     logger.info(f"📊 Итого сгенерировано {total_orders} заказов")
     return all_orders
+
+
+def generate_intraday_orders_today(hook, refs, order_date, ignore_working_days=False):
+    """Небольшая партия заказов за указанный день при каждом срабатывании DAG (по умолчанию только Пн–Пт)."""
+    if not ignore_working_days and not is_working_day(order_date):
+        logger.info(f"{order_date} — выходной, внутридневная генерация пропущена")
+        return []
+    low, high = INTRADAY_BATCH_RANGE
+    n = random.randint(low, high)
+    max_id_result = execute_query("SELECT COALESCE(MAX(order_id), 0) FROM orders", hook=hook)
+    max_order_id = max_id_result[0] if max_id_result and len(max_id_result) > 0 else 0
+    logger.info(f"📦 Внутридневная партия: {n} заказов на {order_date}")
+    orders = []
+    for i in range(n):
+        orders.append(generate_order(refs, order_date, max_order_id + i + 1))
+    return orders
 
 
 def insert_orders_to_db(hook, orders):
@@ -262,6 +281,6 @@ def get_generation_stats(hook):
     
     return {
         'total_orders': stats[0] if stats and len(stats) > 0 else 0,
-        'first_order': stats[2] if stats and len(stats) > 2 else None,
-        'last_order': stats[3] if stats and len(stats) > 3 else None
+        'first_order': stats[1] if stats and len(stats) > 1 else None,
+        'last_order': stats[2] if stats and len(stats) > 2 else None,
     }

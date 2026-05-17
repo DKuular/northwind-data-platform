@@ -16,9 +16,31 @@ services:
   spark-worker:
     image: apache/spark:3.5.0
     container_name: northwind-spark-worker
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    # Worker offers at most this many cores / RAM to the whole cluster (override via .env).
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker
+      -c ${SPARK_WORKER_CORES:-16} 
+      -m ${SPARK_WORKER_MEMORY:-16g}  
+      spark://spark-master:7077
     ports:
       - "8082:8081"
+    networks:
+      - spark-network
+      - data-platform-network
+    depends_on:
+      - spark-master
+    restart: unless-stopped
+
+  spark-history-server:
+    image: apache/spark:3.5.0
+    container_name: northwind-spark-history
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.history.HistoryServer
+    environment:
+      SPARK_HISTORY_OPTS: "-Dspark.history.fs.logDirectory=file:///opt/spark/event-logs -Dspark.history.ui.port=18080"
+    ports:
+      - "18080:18080"
+    volumes:
+      - ./spark-events:/opt/spark/event-logs
     networks:
       - spark-network
       - data-platform-network
@@ -35,8 +57,15 @@ services:
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       JUPYTER_TOKEN: "spark_user"
+      SPARK_CONFIG_PATH: /home/jovyan/work/config/config.json
+      PYTHONPATH: /home/jovyan/work/modules
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     ports:
       - "8888:8888"
+      - "4040:4040"
     networks:
       - spark-network
       - data-platform-network
@@ -44,26 +73,41 @@ services:
       - ./notebooks:/home/jovyan/work
       - ./apps:/home/jovyan/work/apps
       - ivy-cache-jupyter:/home/jovyan/.ivy2
+      - ./config:/home/jovyan/work/config:ro
+      - ./modules:/home/jovyan/work/modules:ro
+      - ./spark-events:/opt/spark/event-logs
     restart: unless-stopped
 
   bronze-customers:
     image: northwind-jupyter:3.5.0
     container_name: northwind-bronze-customers
+    # Waits for Debezium CDC topic (connect-init / snapshot) before spark-submit.
     command: >
-      /usr/local/spark/bin/spark-submit
+      /bin/sh -c "tr -d '\\r' < /home/jovyan/work/scripts/wait-for-cdc-topic.sh | /bin/sh -s &&
+      exec /usr/local/spark/bin/spark-submit
       --master spark://spark-master:7077
       --jars
       /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
-      /home/jovyan/work/apps/bronze_cdc_table.py
+      /home/jovyan/work/apps/bronze_cdc_table.py"
     environment:
       BRONZE_TABLE: customers
+      SPARK_CONFIG_PATH: /home/jovyan/work/config/config.json
+      PYTHONPATH: /home/jovyan/work/modules
+      DATABASE_SERVER_NAME: ${DATABASE_SERVER_NAME:-dbserver1}
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      CONNECT_URL: ${CONNECT_URL:-http://northwind-connect:8083}
+      CONNECTOR_NAME: ${CONNECTOR_NAME:-northwind-connector}
+      MAX_WAIT_SEC: ${CDC_TOPIC_WAIT_SEC:-300}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+      - ./config:/home/jovyan/work/config:ro
+      - ./modules:/home/jovyan/work/modules:ro
+      - ./scripts:/home/jovyan/work/scripts:ro
+      - ./spark-events:/opt/spark/event-logs
     healthcheck:
       disable: true
     networks:
@@ -79,20 +123,31 @@ services:
     image: northwind-jupyter:3.5.0
     container_name: northwind-bronze-products
     command: >
-      /usr/local/spark/bin/spark-submit
+      /bin/sh -c "tr -d '\\r' < /home/jovyan/work/scripts/wait-for-cdc-topic.sh | /bin/sh -s &&
+      exec /usr/local/spark/bin/spark-submit
       --master spark://spark-master:7077
       --jars
       /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
-      /home/jovyan/work/apps/bronze_cdc_table.py
+      /home/jovyan/work/apps/bronze_cdc_table.py"
     environment:
       BRONZE_TABLE: products
+      SPARK_CONFIG_PATH: /home/jovyan/work/config/config.json
+      PYTHONPATH: /home/jovyan/work/modules
+      DATABASE_SERVER_NAME: ${DATABASE_SERVER_NAME:-dbserver1}
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      CONNECT_URL: ${CONNECT_URL:-http://northwind-connect:8083}
+      CONNECTOR_NAME: ${CONNECTOR_NAME:-northwind-connector}
+      MAX_WAIT_SEC: ${CDC_TOPIC_WAIT_SEC:-300}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+      - ./config:/home/jovyan/work/config:ro
+      - ./modules:/home/jovyan/work/modules:ro
+      - ./scripts:/home/jovyan/work/scripts:ro
+      - ./spark-events:/opt/spark/event-logs
     healthcheck:
       disable: true
     networks:
@@ -108,20 +163,31 @@ services:
     image: northwind-jupyter:3.5.0
     container_name: northwind-bronze-orders
     command: >
-      /usr/local/spark/bin/spark-submit
+      /bin/sh -c "tr -d '\\r' < /home/jovyan/work/scripts/wait-for-cdc-topic.sh | /bin/sh -s &&
+      exec /usr/local/spark/bin/spark-submit
       --master spark://spark-master:7077
       --jars
       /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
-      /home/jovyan/work/apps/bronze_cdc_table.py
+      /home/jovyan/work/apps/bronze_cdc_table.py"
     environment:
       BRONZE_TABLE: orders
+      SPARK_CONFIG_PATH: /home/jovyan/work/config/config.json
+      PYTHONPATH: /home/jovyan/work/modules
+      DATABASE_SERVER_NAME: ${DATABASE_SERVER_NAME:-dbserver1}
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      CONNECT_URL: ${CONNECT_URL:-http://northwind-connect:8083}
+      CONNECTOR_NAME: ${CONNECTOR_NAME:-northwind-connector}
+      MAX_WAIT_SEC: ${CDC_TOPIC_WAIT_SEC:-300}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+      - ./config:/home/jovyan/work/config:ro
+      - ./modules:/home/jovyan/work/modules:ro
+      - ./scripts:/home/jovyan/work/scripts:ro
+      - ./spark-events:/opt/spark/event-logs
     healthcheck:
       disable: true
     networks:
@@ -137,20 +203,31 @@ services:
     image: northwind-jupyter:3.5.0
     container_name: northwind-bronze-order-details
     command: >
-      /usr/local/spark/bin/spark-submit
+      /bin/sh -c "tr -d '\\r' < /home/jovyan/work/scripts/wait-for-cdc-topic.sh | /bin/sh -s &&
+      exec /usr/local/spark/bin/spark-submit
       --master spark://spark-master:7077
       --jars
       /opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar,/opt/spark-extra-jars/kafka-clients-3.5.0.jar,/opt/spark-extra-jars/commons-pool2-2.12.0.jar,/opt/spark-extra-jars/hadoop-aws-3.3.4.jar,/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar,/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar
-      /home/jovyan/work/apps/bronze_cdc_table.py
+      /home/jovyan/work/apps/bronze_cdc_table.py"
     environment:
       BRONZE_TABLE: order_details
+      SPARK_CONFIG_PATH: /home/jovyan/work/config/config.json
+      PYTHONPATH: /home/jovyan/work/modules
+      DATABASE_SERVER_NAME: ${DATABASE_SERVER_NAME:-dbserver1}
       KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-northwind-kafka:9092}
+      CONNECT_URL: ${CONNECT_URL:-http://northwind-connect:8083}
+      CONNECTOR_NAME: ${CONNECTOR_NAME:-northwind-connector}
+      MAX_WAIT_SEC: ${CDC_TOPIC_WAIT_SEC:-300}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://northwind-minio:9000}
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       BRONZE_BUCKET: ${BRONZE_BUCKET:-iceberg-warehouse}
     volumes:
       - ./apps:/home/jovyan/work/apps
+      - ./config:/home/jovyan/work/config:ro
+      - ./modules:/home/jovyan/work/modules:ro
+      - ./scripts:/home/jovyan/work/scripts:ro
+      - ./spark-events:/opt/spark/event-logs
     healthcheck:
       disable: true
     networks:

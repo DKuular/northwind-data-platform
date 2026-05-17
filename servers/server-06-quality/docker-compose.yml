@@ -22,8 +22,11 @@ services:
   grafana:
     image: grafana/grafana:10.4.5
     container_name: northwind-grafana
+    # Set GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD in root .env (start-all.sh uses --env-file).
+    # GF_SECURITY_ADMIN_* apply only on first init of grafana_data; reset volume or use UI to change.
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
     ports:
       - "3000:3000"
     volumes:

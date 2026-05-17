@@ -1,9 +1,14 @@
 """
 DAG для генерации продаж Northwind
-Генерация от последней даты в БД до сегодня
-Расписание: каждые 20 минут с 10:00 до 19:00
+- Догоняет пропущенные календарные дни до «вчера» (полные дневные объёмы).
+- В каждый запуск добавляет небольшую партию заказов за сегодня (по умолчанию только Пн–Пт).
+Расписание: каждые 20 минут, круглосуточно.
 
-Версия 1.0.10
+Параметр ignore_working_days (ручной запуск):
+- В UI: Trigger DAG w/ config → JSON: {"ignore_working_days": true}
+- Либо задать в params DAG (по умолчанию false); при ручном запуске конфиг перекрывает params.
+
+Версия 1.3.0
 """
 
 import sys
@@ -15,7 +20,6 @@ sys.path.insert(0, '/opt/airflow/dags_modules')
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from airflow.exceptions import AirflowSkipException  # ← ДОБАВИТЬ ЭТОТ ИМПОРТ
 from datetime import datetime, timedelta
 import logging
 
@@ -23,11 +27,36 @@ from sales_generator import (
     get_last_order_date,
     get_existing_references,
     generate_orders_for_date_range,
+    generate_intraday_orders_today,
     insert_orders_to_db,
-    get_generation_stats
+    get_generation_stats,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _truthy_run_param(value):
+    """Булево из conf/params (JSON/UI может отдать bool, строку или число)."""
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(value)
+
+
+def resolve_ignore_working_days(**context):
+    """True — генерировать и в выходные. Приоритет: dag_run.conf → params DAG."""
+    dr = context.get('dag_run')
+    conf = (dr.conf if dr else None) or {}
+    params = context.get('params') or {}
+    if 'ignore_working_days' in conf:
+        return _truthy_run_param(conf.get('ignore_working_days'))
+    return _truthy_run_param(params.get('ignore_working_days', False))
+
 
 default_args = {
     'owner': 'data_engineer',
@@ -41,47 +70,57 @@ default_args = {
 
 def check_and_generate(**context):
     """
-    Проверка последней даты и генерация недостающих заказов
+    Догоняет дни до вчера (полный дневной объём) и на каждый тик добавляет партию за сегодня.
     """
     hook = PostgresHook(postgres_conn_id='postgres_default')
-    
-    # Последняя дата заказа в БД
+    ignore_wd = resolve_ignore_working_days(**context)
     last_date = get_last_order_date(hook)
     today = datetime.now().date()
-    
-    logger.info(f"📅 Последняя дата заказа: {last_date}")
+
+    logger.info(f"📅 ignore_working_days={ignore_wd}")
+    logger.info(f"📅 Последняя дата заказа в БД: {last_date}")
     logger.info(f"📅 Сегодня: {today}")
-    
-    # Если данных нет, начинаем с 2020-01-01
+
     if last_date is None:
-        start_date = datetime(2020, 1, 1).date()
-        logger.info(f"⚠️ Нет заказов в БД. Начинаем с {start_date}")
+        gap_start = datetime(2020, 1, 1).date()
+        logger.info(f"⚠️ Нет заказов в БД. Догон с {gap_start}")
     else:
-        start_date = last_date + timedelta(days=1)
-    
-    # Если нет пропущенных дней, пропускаем
-    if start_date > today:
-        logger.info(f"✅ Данные актуальны до {last_date}. Пропускаем.")
-        raise AirflowSkipException("Нет новых дней для генерации")
-    
-    logger.info(f"🚀 Начинаем генерацию заказов с {start_date} по {today}")
-    
-    # Получаем справочные данные из Northwind
+        gap_start = last_date + timedelta(days=1)
+
     refs = get_existing_references(hook)
-    
-    # Генерируем заказы
-    orders = generate_orders_for_date_range(hook, refs, start_date, today)
-    
-    if not orders:
-        logger.info("Нет заказов для вставки")
+    created_total = 0
+    amount_total = 0.0
+
+    # Пропущенные календарные дни строго до сегодня (сегодня — только внутридневными партиями)
+    if gap_start < today:
+        backfill_end = today - timedelta(days=1)
+        logger.info(f"🚀 Догон заказов с {gap_start} по {backfill_end}")
+        orders_bf = generate_orders_for_date_range(
+            hook, refs, gap_start, backfill_end, ignore_working_days=ignore_wd
+        )
+        if orders_bf:
+            c, a = insert_orders_to_db(hook, orders_bf)
+            created_total += c
+            amount_total += a
+            logger.info(f"✅ Догон: {c} заказов на ${a:,.2f}")
+
+    # Каждый запуск — небольшая партия за сегодня (Пн–Пт)
+    orders_in = generate_intraday_orders_today(
+        hook, refs, today, ignore_working_days=ignore_wd
+    )
+    if orders_in:
+        c, a = insert_orders_to_db(hook, orders_in)
+        created_total += c
+        amount_total += a
+        logger.info(f"✅ Сегодня (партия): {c} заказов на ${a:,.2f}")
+
+    if created_total == 0:
+        logger.info("Заказов для вставки не было (например, выходной).")
         return
-    
-    # Вставляем в БД
-    created, total_amount = insert_orders_to_db(hook, orders)
-    
-    logger.info(f"✅ Создано {created} заказов на сумму ${total_amount:,.2f}")
-    context['ti'].xcom_push(key='orders_created', value=created)
-    context['ti'].xcom_push(key='total_amount', value=total_amount)
+
+    logger.info(f"✅ Всего за запуск: {created_total} заказов на ${amount_total:,.2f}")
+    context['ti'].xcom_push(key='orders_created', value=created_total)
+    context['ti'].xcom_push(key='total_amount', value=amount_total)
 
 def show_stats(**context):
     """Вывод статистики"""
@@ -99,11 +138,14 @@ def show_stats(**context):
 with DAG(
     'generate_northwind_sales',
     default_args=default_args,
-    description='Генерация продаж Northwind от последней даты до сегодня',
-    schedule_interval='*/20 7-16 * * *',  # Каждые 20 минут с 10:00 до 19:00
+    description='Northwind: догон по дням + внутридневные партии по расписанию',
+    schedule_interval='*/20 * * * *',
     catchup=False,
     tags=['sales', 'generation', 'northwind'],
     max_active_runs=1,
+    params={
+        'ignore_working_days': False,
+    },
 ) as dag:
     
     generate = PythonOperator(

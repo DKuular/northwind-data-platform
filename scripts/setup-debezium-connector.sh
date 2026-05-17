@@ -1,4 +1,6 @@
 #!/bin/bash
+# Ручной запуск с хоста (REST на localhost:8083). Для стека предпочтительнее
+# one-shot connect-init в servers/server-03-kafka-connect/docker-compose.yml.
 
 echo "🔌 Setting up Debezium PostgreSQL connector..."
 

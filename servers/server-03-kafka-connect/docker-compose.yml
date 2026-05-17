@@ -26,7 +26,40 @@ services:
     networks:
       - connect-network
       - data-platform-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
+
+  connect-init:
+    image: curlimages/curl:8.11.1
+    container_name: northwind-connect-init
+    # Strip CR so Windows CRLF bind-mounts do not break `set` on line 2.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - "tr -d '\\r' < /scripts/register-debezium.sh | exec /bin/sh -s"
+    environment:
+      CONNECT_URL: http://northwind-connect:8083
+      CONNECTOR_NAME: northwind-connector
+      POSTGRES_HOST: northwind-postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DATABASE_SERVER_NAME: ${DATABASE_SERVER_NAME}
+    volumes:
+      - ./connect-init/register-debezium.sh:/scripts/register-debezium.sh:ro
+    networks:
+      - connect-network
+      - data-platform-network
+    depends_on:
+      kafka-connect:
+        condition: service_healthy
+    restart: "no"
 
   debezium-ui:
     image: quay.io/debezium/debezium-ui:latest

@@ -44,7 +44,10 @@ jobs:
           cat > .env << 'EOF'
           POSTGRES_PASSWORD=test123
           MINIO_ROOT_PASSWORD=test123
+          GRAFANA_ADMIN_USER=admin
           GRAFANA_ADMIN_PASSWORD=admin
+          OPENMETADATA_DB_USER=openmetadata_user
+          OPENMETADATA_DB_PASSWORD=test123
           EOF
 
       - name: Validate Docker Compose files

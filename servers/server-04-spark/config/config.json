@@ -1,0 +1,62 @@
+{
+    "version": 1,
+    "spark": {
+      "master": "spark://spark-master:7077",
+      "shuffle_partitions": "2"
+    },
+    "spark_observability": {
+      "driver_ui_port": "4040",
+      "driver_log_level": "WARN",
+      "event_log_enabled": true,
+      "event_log_dir": "file:///opt/spark/event-logs",
+      "event_log_compress": true
+    },
+    "minio": {
+      "endpoint_env": "MINIO_ENDPOINT",
+      "default_endpoint": "http://northwind-minio:9000",
+      "access_key_env": "MINIO_ROOT_USER",
+      "secret_key_env": "MINIO_ROOT_PASSWORD",
+      "bucket_env": "BRONZE_BUCKET",
+      "default_bucket": "iceberg-warehouse"
+    },
+    "extra_jars": [
+      "/opt/spark-extra-jars/spark-sql-kafka-0-10_2.12-3.5.0.jar",
+      "/opt/spark-extra-jars/spark-token-provider-kafka-0-10_2.12-3.5.0.jar",
+      "/opt/spark-extra-jars/kafka-clients-3.5.0.jar",
+      "/opt/spark-extra-jars/commons-pool2-2.12.0.jar",
+      "/opt/spark-extra-jars/hadoop-aws-3.3.4.jar",
+      "/opt/spark-extra-jars/aws-java-sdk-bundle-1.12.262.jar",
+      "/opt/spark-extra-jars/iceberg-spark-runtime-3.5_2.12-1.5.0.jar"
+    ],
+    "docker": {
+      "jupyter_container": "northwind-jupyter",
+      "spark_submit": "/usr/local/spark/bin/spark-submit",
+      "apps_dir_container": "/home/jovyan/work/apps"
+    },
+    "bronze_streaming": {
+      "cores_max": "2",
+      "executor_cores": "2",
+      "executor_instances": "1",
+      "executor_memory": "768m"
+    },
+    "silver_batch": {
+      "cores_max": "4",
+      "executor_cores": "2",
+      "executor_instances": "1",
+      "executor_memory": "1g",
+      "shuffle_partitions": "4"
+    },
+    "gold_batch": {
+      "cores_max": "4",
+      "executor_cores": "2",
+      "executor_instances": "2",
+      "executor_memory": "1g",
+      "shuffle_partitions": "4"
+    },
+    "jobs": {
+      "silver_customers": {
+        "script": "silver_batch_customers.py",
+        "description": "Bronze customers_cdc -> silver/customers"
+      }
+    }
+  }

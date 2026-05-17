@@ -31,6 +31,10 @@ logs/
 server-01-oltp/logs/*
 servers/server-01-oltp/dags/__pycache__/*
 
+# Spark SHS event logs (keep directory)
+servers/server-04-spark/spark-events/*
+!servers/server-04-spark/spark-events/.gitkeep
+
 # Spark artifacts
 spark-warehouse/
 metastore_db/
@@ -87,3 +91,6 @@ docker_commands.md
 
 # Conversations
 conversations/
+
+# QA
+qa.text
